@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GREEN AVAX — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --dark:#020a02;--green:#00ff41;--green3:#007a1e;
+  --green-glow:rgba(0,255,65,0.25);
+  --bronze:#cd7f32;--bronze2:#e8963c;
+  --silver:#a8a8b8;--silver2:#d4d4e0;
+  --gold:#ffd700;--gold2:#ffe84d;
+  --font-hud:'Orbitron',monospace;
+  --font-mono:'Share Tech Mono',monospace;
+}
+body{background:var(--dark);color:#b0c8b0;font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden;}
+.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(0,255,65,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,65,0.04) 1px,transparent 1px);background-size:50px 50px;}
+.wrap{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:3rem 1.5rem 4rem;}
+
+.lock-screen{text-align:center;padding:5rem 1rem;}
+.lock-icon{font-size:48px;margin-bottom:1rem;color:rgba(0,255,65,0.3);}
+.lock-text{font-family:var(--font-mono);font-size:13px;color:rgba(255,255,255,0.3);letter-spacing:0.1em;margin-bottom:2rem;}
+.connect-btn{
+  font-family:var(--font-hud);font-size:12px;font-weight:700;letter-spacing:0.18em;
+  padding:14px 36px;background:transparent;border:1px solid var(--green);
+  color:var(--green);border-radius:3px;cursor:pointer;transition:all 0.25s;
+  text-transform:uppercase;position:relative;overflow:hidden;
+}
+.connect-btn::after{content:'';position:absolute;inset:0;background:var(--green);transform:scaleX(0);transform-origin:left;transition:transform 0.25s;z-index:-1;}
+.connect-btn:hover{color:var(--dark);}
+.connect-btn:hover::after{transform:scaleX(1);}
+
+.header{text-align:center;margin-bottom:2.5rem;}
+.h-tag{font-family:var(--font-mono);font-size:10px;color:rgba(0,255,65,0.4);letter-spacing:0.3em;text-transform:uppercase;margin-bottom:8px;}
+.h-title{font-family:var(--font-hud);font-size:32px;font-weight:900;color:var(--green);letter-spacing:0.1em;text-shadow:0 0 30px var(--green-glow);}
+.h-owner{font-family:var(--font-mono);font-size:11px;color:rgba(0,255,65,0.5);margin-top:10px;letter-spacing:0.05em;}
+
+.denied{
+  text-align:center;padding:3rem 1.5rem;
+  border:1px solid rgba(255,60,60,0.25);border-radius:4px;
+  background:rgba(255,60,60,0.03);
+}
+.denied-icon{font-size:40px;margin-bottom:1rem;}
+.denied-title{font-family:var(--font-hud);font-size:16px;color:rgba(255,80,80,0.8);letter-spacing:0.1em;margin-bottom:8px;}
+.denied-sub{font-family:var(--font-mono);font-size:11px;color:rgba(255,255,255,0.3);}
+
+.panel{border:1px solid rgba(0,255,65,0.15);border-radius:4px;background:linear-gradient(160deg,rgba(0,255,65,0.02),rgba(0,0,0,0.3));overflow:hidden;margin-bottom:1.5rem;}
+.panel-top{height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);}
+.panel-inner{padding:1.75rem;}
+
+.tier-rows{display:flex;flex-direction:column;gap:10px;margin-bottom:1.5rem;}
+.tier-row{
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(0,0,0,0.3);border-radius:3px;padding:14px 16px;
+  border-left:3px solid;
+}
+.tier-row.bronze-row{border-color:var(--bronze);}
+.tier-row.silver-row{border-color:var(--silver);}
+.tier-row.gold-row{border-color:var(--gold);}
+.tr-left{display:flex;align-items:center;gap:12px;}
+.tr-emblem{font-size:22px;}
+.tr-name{font-family:var(--font-hud);font-size:13px;font-weight:700;letter-spacing:0.1em;}
+.tr-amount{font-family:var(--font-hud);font-size:18px;font-weight:700;}
+.tr-status{font-family:var(--font-mono);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;margin-top:2px;}
+.tr-right{text-align:right;}
+
+.total-row{
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:16px 0;border-top:1px solid rgba(0,255,65,0.1);margin-bottom:1.5rem;
+}
+.total-label{font-family:var(--font-mono);font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:0.15em;text-transform:uppercase;}
+.total-amount{font-family:var(--font-hud);font-size:26px;font-weight:900;color:var(--green);text-shadow:0 0 20px var(--green-glow);}
+
+.sweep-btn{
+  width:100%;padding:18px;border-radius:3px;border:none;
+  font-family:var(--font-hud);font-size:14px;font-weight:700;
+  letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;
+  background:linear-gradient(135deg,#007a1e,var(--green));
+  color:#000;transition:all 0.2s;margin-bottom:8px;
+}
+.sweep-btn:hover:not(:disabled){box-shadow:0 0 30px var(--green-glow);}
+.sweep-btn:disabled{opacity:0.3;cursor:not-allowed;}
+
+.refresh-btn{
+  width:100%;padding:10px;background:transparent;border:1px solid rgba(0,255,65,0.15);
+  color:rgba(0,255,65,0.4);font-family:var(--font-mono);font-size:10px;letter-spacing:0.15em;
+  text-transform:uppercase;border-radius:2px;cursor:pointer;transition:all 0.2s;
+}
+.refresh-btn:hover{color:var(--green);border-color:rgba(0,255,65,0.4);}
+
+.log-panel{margin-top:1.5rem;}
+.log-title{font-family:var(--font-mono);font-size:10px;letter-spacing:0.2em;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:10px;}
+.log-list{display:flex;flex-direction:column;gap:6px;}
+.log-item{
+  font-family:var(--font-mono);font-size:11px;padding:10px 14px;
+  border-radius:2px;display:flex;justify-content:space-between;align-items:center;
+}
+.log-item.pending{background:rgba(0,255,65,0.03);border:1px solid rgba(0,255,65,0.15);color:rgba(0,255,65,0.5);}
+.log-item.success{background:rgba(0,255,65,0.06);border:1px solid rgba(0,255,65,0.3);color:var(--green);}
+.log-item.skip{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.25);}
+.log-item.error{background:rgba(255,60,60,0.04);border:1px solid rgba(255,60,60,0.2);color:rgba(255,80,80,0.7);}
+
+footer{text-align:center;margin-top:3rem;font-family:var(--font-mono);font-size:10px;color:rgba(255,255,255,0.1);letter-spacing:0.1em;}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="wrap">
+
+  <div class="header">
+    <div class="h-tag">// private admin panel</div>
+    <div class="h-title">GREEN AVAX</div>
+    <div class="h-owner" id="ownerLine" style="display:none;">Connected as <span id="ownerAddr">—</span></div>
+  </div>
+
+  <div id="lockScreen" class="lock-screen">
+    <div class="lock-icon">⬡</div>
+    <div class="lock-text">CONNECT THE OWNER WALLET TO ACCESS THIS PANEL</div>
+    <button class="connect-btn" onclick="connectWallet()">CONNECT WALLET</button>
+  </div>
+
+  <div id="deniedScreen" style="display:none;">
+    <div class="denied">
+      <div class="denied-icon">⛔</div>
+      <div class="denied-title">ACCESS DENIED</div>
+      <div class="denied-sub">This wallet is not authorized as owner on any deployed contract.</div>
+    </div>
+  </div>
+
+  <div id="adminPanel" style="display:none;">
+
+    <div class="panel">
+      <div class="panel-top"></div>
+      <div class="panel-inner">
+        <div class="tier-rows" id="tierRows">
+          <div class="tier-row bronze-row">
+            <div class="tr-left"><span class="tr-emblem" style="color:var(--bronze);">⬡</span><span class="tr-name" style="color:var(--bronze2);">BRONZE</span></div>
+            <div class="tr-right"><div class="tr-amount" id="b-amt" style="color:var(--bronze2);">—</div><div class="tr-status" id="b-status" style="color:rgba(255,255,255,0.2);">checking…</div></div>
+          </div>
+          <div class="tier-row silver-row">
+            <div class="tr-left"><span class="tr-emblem" style="color:var(--silver);">◈</span><span class="tr-name" style="color:var(--silver2);">SILVER</span></div>
+            <div class="tr-right"><div class="tr-amount" id="s-amt" style="color:var(--silver2);">—</div><div class="tr-status" id="s-status" style="color:rgba(255,255,255,0.2);">checking…</div></div>
+          </div>
+          <div class="tier-row gold-row">
+            <div class="tr-left"><span class="tr-emblem" style="color:var(--gold);">✦</span><span class="tr-name" style="color:var(--gold2);">GOLD</span></div>
+            <div class="tr-right"><div class="tr-amount" id="g-amt" style="color:var(--gold2);">—</div><div class="tr-status" id="g-status" style="color:rgba(255,255,255,0.2);">checking…</div></div>
+          </div>
+        </div>
+
+        <div class="total-row">
+          <span class="total-label">Total Withdrawable</span>
+          <span class="total-amount" id="totalAmt">— AVAX</span>
+        </div>
+
+        <button class="sweep-btn" id="sweepBtn" onclick="sweepAll()" disabled>⚡ WITHDRAW ALL TO OWNER WALLET</button>
+        <button class="refresh-btn" onclick="refreshBalances()">↻ refresh balances</button>
+      </div>
+    </div>
+
+    <div class="log-panel" id="logPanel" style="display:none;">
+      <div class="log-title">// transaction log</div>
+      <div class="log-list" id="logList"></div>
+    </div>
+
+  </div>
+
+  <footer>GREEN AVAX ADMIN · AVALANCHE C-CHAIN · NOT LINKED PUBLICLY</footer>
+</div>
+
+<script>
+const TIERS = {
+  b: { addr:"0xbe71B1A5C9Ce53CbDa369951AF28430Aa61d42e3", label:"BRONZE", col:"var(--bronze2)" },
+  s: { addr:"0x65EF99B8b5bBd2C4877fbAD4674e6945cF1de71E", label:"SILVER", col:"var(--silver2)" },
+  g: { addr:"0x41b94a549c62307BD248390EfEf82e94BFB1720D", label:"GOLD",   col:"var(--gold2)" }
+};
+const CHAIN = 43114;
+const ABI = [
+  "function owner() view returns (address)",
+  "function avaxCollected() view returns (uint256)",
+  "function withdrawAVAX() external"
+];
+
+let provider, signer, userAddr;
+const ctrs = {};
+let balances = { b: 0n, s: 0n, g: 0n };
+
+function short(a){ return a.slice(0,6)+'…'+a.slice(-4); }
+function fmtAvax(wei){ return Number(ethers.formatEther(wei)).toFixed(5); }
+
+async function connectWallet(){
+  if(!window.ethereum){ alert('Install MetaMask or Core Wallet.'); return; }
+  try{
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send('eth_requestAccounts', []);
+    const net = await provider.getNetwork();
+    if(Number(net.chainId) !== CHAIN){
+      try{ await window.ethereum.request({ method:'wallet_switchEthereumChain', params:[{chainId:'0xa86a'}] }); }
+      catch(e){ alert('Please switch to Avalanche C-Chain.'); return; }
+    }
+    signer = await provider.getSigner();
+    userAddr = await signer.getAddress();
+
+    for(const k of ['b','s','g']) ctrs[k] = new ethers.Contract(TIERS[k].addr, ABI, signer);
+
+    // Verify owner on at least one contract
+    let isOwner = false;
+    for(const k of ['b','s','g']){
+      try{
+        const o = await ctrs[k].owner();
+        if(o.toLowerCase() === userAddr.toLowerCase()) isOwner = true;
+      }catch(e){}
+    }
+
+    document.getElementById('lockScreen').style.display='none';
+
+    if(!isOwner){
+      document.getElementById('deniedScreen').style.display='block';
+      return;
+    }
+
+    document.getElementById('ownerLine').style.display='block';
+    document.getElementById('ownerAddr').textContent = short(userAddr);
+    document.getElementById('adminPanel').style.display='block';
+
+    await refreshBalances();
+  }catch(e){ console.error(e); }
+}
+
+async function refreshBalances(){
+  const map = {b:'b',s:'s',g:'g'};
+  let total = 0n;
+  for(const k of ['b','s','g']){
+    try{
+      const bal = await ctrs[k].avaxCollected();
+      balances[k] = bal;
+      total += bal;
+      document.getElementById(k+'-amt').textContent = fmtAvax(bal) + ' AVAX';
+      const statusEl = document.getElementById(k+'-status');
+      if(bal === 0n){
+        statusEl.textContent = 'empty — will skip';
+        statusEl.style.color = 'rgba(255,255,255,0.2)';
+      } else {
+        statusEl.textContent = 'ready to withdraw';
+        statusEl.style.color = TIERS[k].col.replace('var(','').replace(')','');
+        statusEl.style.color = '';
+        statusEl.style.setProperty('color', TIERS[k].col);
+      }
+    }catch(e){ console.warn(k, e); }
+  }
+  document.getElementById('totalAmt').textContent = fmtAvax(total) + ' AVAX';
+  document.getElementById('sweepBtn').disabled = (total === 0n);
+}
+
+function addLog(msg, type){
+  const panel = document.getElementById('logPanel');
+  panel.style.display = 'block';
+  const list = document.getElementById('logList');
+  const item = document.createElement('div');
+  item.className = 'log-item ' + type;
+  item.innerHTML = msg;
+  list.appendChild(item);
+  return item;
+}
+
+async function sweepAll(){
+  const btn = document.getElementById('sweepBtn');
+  btn.disabled = true;
+  btn.textContent = 'PROCESSING...';
+  document.getElementById('logList').innerHTML = '';
+  document.getElementById('logPanel').style.display = 'block';
+
+  let totalSwept = 0n;
+  let signCount = 0;
+
+  for(const k of ['b','s','g']){
+    const tier = TIERS[k];
+    if(balances[k] === 0n){
+      addLog(`<span>${tier.label}</span><span>SKIPPED — empty</span>`, 'skip');
+      continue;
+    }
+
+    const logItem = addLog(`<span>${tier.label}</span><span>Awaiting signature…</span>`, 'pending');
+    try{
+      const tx = await ctrs[k].withdrawAVAX();
+      logItem.querySelector('span:last-child').textContent = 'Confirming…';
+      const receipt = await tx.wait();
+      signCount++;
+      totalSwept += balances[k];
+      logItem.className = 'log-item success';
+      logItem.innerHTML = `<span>${tier.label}</span><span>✓ ${fmtAvax(balances[k])} AVAX swept</span>`;
+    }catch(e){
+      logItem.className = 'log-item error';
+      const msg = e?.reason || e?.message || 'Transaction failed';
+      logItem.innerHTML = `<span>${tier.label}</span><span>✗ ${msg.slice(0,40)}</span>`;
+    }
+  }
+
+  addLog(`<span>TOTAL</span><span>${fmtAvax(totalSwept)} AVAX in ${signCount} signature(s)</span>`, 'success');
+
+  btn.textContent = '⚡ WITHDRAW ALL TO OWNER WALLET';
+  await refreshBalances();
+}
+
+window.addEventListener('load', async () => {
+  if(window.ethereum){
+    const acc = await window.ethereum.request({ method:'eth_accounts' });
+    if(acc.length) connectWallet();
+  }
+});
+</script>
+</body>
+</html>
